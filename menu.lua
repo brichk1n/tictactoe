@@ -12,6 +12,13 @@ local buttonsGroup = display.newGroup() -- Суда кладем все кноп
 local textGroup = display.newGroup() -- Суда текст
 local backGroup = display.newGroup() -- А тут будут элементы бекграунда
 
+
+-- local function gotoPlay()
+-- 	composer.removeScene( "play" )
+-- 	composer.gotoScene( "play", { time=800, effect="crossFade" } )
+-- end
+
+
 -- -----------------------------------------------------------------------------------
 -- Scene event functions
 -- -----------------------------------------------------------------------------------
@@ -26,24 +33,24 @@ function scene:create( event )
     sceneGroup:insert(textGroup) -- Вкладываем textGroup в sceneGroup
     sceneGroup:insert(backGroup) -- Вкладываем backGroup в sceneGroup
 
-    local function buttonSoloEvent( event ) -- Эта функция работает при нажатии на buttonPlay
+    local function buttonPlayEvent( event ) -- Эта функция работает при нажатии на buttonPlay
 
 
         if ( "ended" == event.phase ) then
-            composer.removeScene( "solo" )
-            composer.gotoScene( "solo", { time=800, effect="crossFade" } )
-            print( "buttonSolo was pressed and released" )
+            composer.removeScene( "soloImpossible" )
+            composer.gotoScene( "soloImpossible", { time=800, effect="crossFade" } )
+            print( "buttonPlay was pressed and released" )
         end
     end
 
     -- Create the widget
-    local buttonSolo = widget.newButton(
+    local buttonPlay = widget.newButton(
         {
-            label = "SOLO",
+            label = "PLAY",
             fontSize = 35,
             -- font = "Lucida Console",
             labelColor = { default={1,1,1,1}, over={1,1,1,0.4} },
-            onEvent = buttonSoloEvent,
+            onEvent = buttonPlayEvent,
             emboss = false,
             -- Properties for a rounded rectangle button
             shape = "roundedRect",
@@ -57,61 +64,14 @@ function scene:create( event )
     )
 
     -- Center the button
-    buttonSolo.x = W/2
-    buttonSolo.y = H/2+W*0.5
-    buttonsGroup:insert(buttonSolo)
-
-
-
-
-    local function buttonDoubleEvent( event ) -- Эта функция работает при нажатии на buttonPlay
-
-
-        if ( "ended" == event.phase ) then
-            composer.removeScene( "double" )
-            composer.gotoScene( "double", { time=800, effect="crossFade" } )
-            print( "buttonDouble was pressed and released" )
-        end
-    end
-
-    -- Create the widget
-    local buttonDouble = widget.newButton(
-        {
-            label = "DOUBLE",
-            fontSize = 35,
-            -- font = "Lucida Console",
-            labelColor = { default={1,1,1,1}, over={1,1,1,0.4} },
-            onEvent = buttonDoubleEvent,
-            emboss = false,
-            -- Properties for a rounded rectangle button
-            shape = "roundedRect",
-            width = 200,
-            height = 40,
-            cornerRadius = 2,
-            fillColor = { default={1,0,0,1}, over={1,0.1,0.7,0.4} },
-            strokeColor = { default={1,0.4,0,1}, over={0.8,0.8,1,1} },
-            strokeWidth = 4
-        }
-    )
-
-    -- Center the button
-    buttonDouble.x = W/2
-    buttonDouble.y = H/2+W*0.7
-    buttonsGroup:insert(buttonDouble)
-
-
-
-
-
-
-
-
+    buttonPlay.x = W/2
+    buttonPlay.y = H/2+W*0.5
+    buttonsGroup:insert(buttonPlay)
 
 
     local function buttonNickEvent( event ) -- Эта функция работает при нажатии на buttonPlay
+
         if ( "ended" == event.phase ) then
-            composer.removeScene( "wheel" )
-            composer.gotoScene( "wheel", { time=800, effect="crossFade" } )
             print( "buttonNick was pressed and released" )
         end
     end
@@ -123,7 +83,7 @@ function scene:create( event )
             fontSize = 18,
             font = "Lucida Console",
             labelColor = { default={1,1,1,1}, over={1,1,1,0.4} },
-            onEvent = buttonNickEvent,
+            onEvent = handleButtonEvent,
             textOnly = true,
             emboss = false,
             -- Properties for a rounded rectangle button
@@ -140,7 +100,7 @@ function scene:create( event )
     -- Center the button
     buttonNick.x = 49
     buttonNick.y = 15
-    buttonsGroup:insert(buttonNick)
+    sceneGroup:insert(buttonNick)
 
     local rankCircle = display.newCircle(textGroup, 15, 15, 7)
     rankCircle:setFillColor(1,1,0,1)

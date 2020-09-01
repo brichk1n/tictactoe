@@ -80,16 +80,15 @@ function scene:create( event )
     local WhoNow = 1 -- Используется для емблем
     local count = 5; -- Размер поля
     local countToWin = 4; -- Сколько нужно поставить в ряд для победы
+    local playerFigure = 1;
+    local AIFigure = playerFigure*-1;
     local W = display.contentWidth; -- Создаём переменную W что бы не писать каждый раз Width
     local H = display.contentHeight; -- Создаём переменную H что бы не писать каждый раз Height
     local size = display.contentWidth/count; -- Размер клетки
     local startX = W/2 + size/2 - size*count/2; -- Начало отчета для клетки
     local startY = H/2 + size/2 - size*count/2; -- Начало отсчета для клетки
-    local emblems = {"redKrestikButton.png", "greenNolikButton.png"}; -- Массив с эмблемами "krestMenu.png", "nolMenu.png",
-    local arrayText = {}; -- Значения клеток хранятся тут
-    local accessTurn = true;
-    local accessToLock = true;
-
+    local emblems = {"redKrestikButton.png", "greenNolikButton.png"} -- Массив с эмблемами "krestMenu.png", "nolMenu.png",
+    local arrayText = {} -- Значения клеток хранятся тут
     local array = {} -- Сами клетки хранятся тут
     for i= 1, count do -- Создаем двумерный массив
         array[i] = {}
@@ -104,8 +103,8 @@ function scene:create( event )
     --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     -- Functions
     --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    --Функция, которая считает свободные квадратики
-    function getCountFreeRect()
+
+    function getCountFreeRect() --Функция, которая считает свободные квадратики
         local countFree = count^2;
         for i = 1, count do
             for j = 1, count do
@@ -119,23 +118,10 @@ function scene:create( event )
     end
 
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    -- local function lockTheBlock()
-    --     local countAreas = 0;
-    --     if ( count >= 12 or count == 8 ) then
-    --         countAreas = 4;
-    --     elseif ( count < 12 and count%3 == 0 ) then
-    --         countAreas = 3;
-    --     else
-    --         countAreas = 2;
-    --     end
-    --     local areas = count//countAreas;
-    --     local allAreas = areas^2;
-    --     -------------------------------------------------
-    --     for i = 1, count^2/allAreas do
-    --
-    --     end
-    -- end
-    ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
     local function CheckWin() -- ооооо, тут все и начинается
         local function Victory(sum)
             -- print("---Victory---")
@@ -224,7 +210,172 @@ function scene:create( event )
     end
 
 
+    ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+    local function turnAI() -- Тут у наc функкция отвечающая за ИИ
+        local arrayAttacks = {}; -- Массив с координатами атак/выгодных ходов
+        local arrayPotential = {}; -- Потенциал клетки(изначально для каждой клетки, это 0)
+        local protectedCells = {}; -- Массив, отвечает за количество клеток, закрывающих атаку.
+        local lenDir = 1 -- Дополнение к protectedCells. Определяет, достаточно ли клеток для завершения игры внутри закрытой атаки(если protectedCells[y][x] = 2).
+        local arrayCellDiv = {}; -- Делитель, который нужен для обработки рваных атак
+        local maxPotential = 0 -- Максимальный потенциал клетки на всём поле. Используется для сравнения с потенциалом конкретной клетки.
+
+        for i = 1, count do -- Заполняем массивы
+            arrayPotential[i] = {}
+            protectedCells[i] = {}
+            -- lenDir[i] = {}
+            for j = 1, count do
+                arrayPotential[i][j] = 0
+                protectedCells[i][j] = 0
+                arrayCellDiv[i][j] = 1
+                -- lenDir[i][j] = 1
+            end
+        end
+        local function turnAIRagnaryok(mltprY, mltprX)
+            ----- allDirections -----
+            for i=1, count do
+                for j=1, count do
+                    maxPotential = 0
+                    if ( arrayText[i][j] == 0 ) then
+                        arrayCellDiv[i][j] = 0; -- Это не надо
+                        for c=1, countToWin+1 do -- Канешна, как же без этих "бесполезных" циклов для проверки каждой клетки
+                            ----- isAttackProtected      если эта клетка  равна  следующей клетке*-1  и  следующая клетка не равна нулю то это значит что мы наткнулись на клетку врага и дальше делать проверку смысла нет
+                            if ( j+c <= count and arrayText[i][j+c-1] == arrayText[i][j+c]* -1 and arrayText[i][j+c] ~= 0 ) then --
+                                -- protectedCells[i][j] = protectedCells[i][j] + 1;
+                                do break end
+                            elseif ( j+c <= count and arrayText[i][j+c] == 0 ) then
+                                arrayCellDiv[i][j] = arrayCellDiv[i][j] + 1
+                            end
+
+                            ----- playerFigure
+                            if ( j+c <= count and arrayText[i][j+c] == playerFigure and arrayPotential[i][j] <= 0 ) then
+                                arrayPotential[i][j] = arrayPotential[i][j] - 1/arrayCellDiv[i][j]; -- По условию if-а выше, есть серия из фигур игрока, а значит увеличиваем потенциал клетки
+                                if ( arrayPotential[i][j] == maxPotential ) then
+                                    arrayAttacks[#arrayAttacks+1] = {i, j+c}; -- Это на случай существования нескольких одинаково важных клеток
+                                elseif ( arrayPotential[i][j] > maxPotential ) then
+                                    for a=1, #arrayAttacks do -- Если мы нашли клетку, которая по потенциалу больше всех прошлых, то обнуляем массив
+                                        arrayAttacks[#arrayAttacks] = nil;
+                                    end
+                                    maxPotential = arrayPotential[i][j]; -- Обновляем максимальное значение потенциала
+                                    arrayAttacks[#arrayAttacks+1] = {i, j+c};
+                                end
+                                                                    ----- AIFigure
+                            elseif ( j+c <= count and arrayText[i][j+c] == AIFigure and arrayPotential[i][j] >= 0 ) then
+                                arrayPotential[i][j] = arrayPotential[i][j] + 1.25/arrayCellDiv[i][j]; -- По условию if-а выше, есть серия из фигур ИИ. Так как сейчас ход ИИ, его фигуры приоритетнее фигур игрока
+                                if ( arrayPotential[i][j] == maxPotential ) then
+                                    arrayAttacks[#arrayAttacks+1] = {i, j+c}; -- Это на случай существования нескольких одинаково важных клеток
+                                elseif ( arrayPotential[i][j] > maxPotential ) then
+                                    for a=1, #arrayAttacks do -- Если мы нашли клетку, которая по потенциалу больше всех прошлых, то обнуляем массив
+                                        arrayAttacks[#arrayAttacks] = nil;
+                                    end
+                                    maxPotential = arrayPotential[i][j]; -- Обновляем максимальное значение потенциала
+                                    arrayAttacks[#arrayAttacks+1] = {i, j+c};
+                                end
+                            end
+                        end
+                    end
+                    -- turnAIRagnaryok()
+                end
+            end
+        end
+
+
+        local function LAVRai(mltX, mltY) -- = -1 or 0 or 1
+            for Dir=1, 2 do
+                local mltDir = 1;
+                mltX = mltX * mltDir
+                mltY = mltY * mltDir
+                for y = 1, count do
+                    aгrrayCellDiv[i] = {}
+                    for x = 1, count do
+                        arrayCellDiv[y][x] = 0
+                        if ( arrayText[y][x] == 0 ) then
+                            local potential = 0 -- Промежуточный потенциал
+                            for c = 1, countToWin+1 do
+                                local resMltX = x + c * mltX
+                                local resMltY = y + c * mltY
+
+                                if ( resMltX > count or resMltX <= 0 ) or ( resMltY > count or resMltY <= 0 ) then
+
+                                    -- если эта клетка равна следующей клетке*-1 и следующая клетка не равна нулю то это значит что мы наткнулись на клетку врага и дальше делать проверку смысла нет
+                                    if ( arrayText[y + (c-1) * mltY][x + (c-1) * mltX] == arrayText[y + c * mltY][x + c * mltX] * -1 and arrayText[y + c * mltY][x + c * mltX] ~= 0 ) then
+                                        protectedCells[y][x] = protectedCells[y][x] + 1
+                                        lenDir = lenDir + c-1
+                                        if ( protectedCells[y][x] == 2 and lenDir[y][x] <= countToWin ) then
+                                            protectedCells[y][x] = 0
+                                            arrayPotential
+                                        end
+                                        do break end
+
+                                    -- Выражение c * mltY/X делает возможным движение в любом направлении
+                                    elseif ( arrayText[y + c * mltY][x + c * mltX] == 0 ) then
+                                        arrayCellDiv[y][x] = arrayCellDiv[y][x] + 1
+                                    end
+
+                                    local function CreateTurns(incOfPotential) -- = 1/1.25
+                                        if not ( lenDir < countToWin ) then -- Если lenDir меньше countToWin, то записывать промежуточный потенциал в постоянный мы не будем
+                                            arrayPotential[y][x] = arrayPotential[y][x] + potential; -- По условию if-а при вызове функции, есть серия из фигур игрока, а значит увеличиваем потенциал клетки
+                                        end
+                                        if ( arrayPotential[y][x] == maxPotential ) then
+                                            arrayAttacks[#arrayAttacks+1] = {y, x}; -- Это на случай существования нескольких одинаково важных клеток
+                                        elseif ( arrayPotential[y][x] > maxPotential ) then
+                                            for a=1, #arrayAttacks do -- Если мы нашли клетку, которая по потенциалу больше всех прошлых, то обнуляем массив
+                                                arrayAttacks[#arrayAttacks] = nil;
+                                            end
+                                            maxPotential = arrayPotential[y][x]; -- Обновляем максимальное значение потенциала
+                                            arrayAttacks[#arrayAttacks+1] = {y, x};
+                                        end
+                                    end
+                                    if ( arrayText[y + c * mltY][x + c * mltX] == playerFigure ) then
+                                        CreateTurns(1)
+                                    elseif ( arrayText[y + c * mltY][x + c * mltX] == AIFigure ) then
+                                        CreateTurns(1.25)
+                                    end
+
+                                else
+                                    do break end
+                                end
+                            end
+                        end
+                    end
+                end
+                mltDir = mltDir*-1
+            end
+        end
+
+
+
+        local function drawAI()
+            for i= 1, count do
+                for j = 1, count do
+                    print( "drawAI" )
+                    local item_mc = array[i][j];
+                    print( #arrayAttacks )
+                    local randomAttack = math.random(1, #arrayAttacks);
+                    if ( item_mc.enabled and arrayAttacks[randomAttack][1] == i and arrayAttacks[randomAttack][2] == j ) then
+                        local _x, _y = item_mc:localToContent( 0, 0 ); -- Тут узнаём координаты центров всех квадратов
+                        if WhoNow > 2 then
+                            WhoNow = 1
+                        end
+                        local Kartina = display.newImageRect(emblems[WhoNow], size/1.5, size/1.5)
+                        Kartina.x = _x
+                        Kartina.y = _y
+                        item_mc.enabled = false;
+                        WhoNow = WhoNow + 1
+                        if ( WhoNow % 2 == 0 ) then
+                            arrayText[i][j] = 1
+                            print( "X has been printed in [" .. i .. "][" .. j .. "]" )
+                        else
+                            arrayText[i][j] = -1
+                            print( "O has been printed in [" .. i .. "][" .. j .. "]" )
+                        end
+                    end
+                end
+            end
+        end
+        turnAIRagnaryok()
+        drawAI()
+    end
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     -- Дохрена сложная функция :D
@@ -278,19 +429,19 @@ function scene:create( event )
                 end
             end
         elseif ( phase == 'ended' ) then
-            if(getCountFreeRect() > 0) then
+            if( getCountFreeRect() > 0 ) then
                 for i= 1, count do
                     for j = 1, count do
                         local item_mc = array[i][j];
                         if (item_mc.selected and item_mc.enabled) then -- Если квадратик выбран и доступен, ставим там крестик
                               local _x, _y = item_mc:localToContent( 0, 0 ); -- Тут узнаём координаты центров всех квадратов
-                              if WhoNow > 2 then
+                              if WhoNow > 2 then -- У нас только 2 фигуры(но это не точно), поэтому пока WhoNow не может быть больше чем 2
                                 WhoNow = 1
                               end
-                              Kartina = display.newImageRect(emblems[WhoNow], size/1.5, size/1.5)
+                              local Kartina = display.newImageRect(emblems[WhoNow], size/1.5, size/1.5)
                               Kartina.x = _x
                               Kartina.y = _y
-                              item_mc.enabled = false;
+                              item_mc.enabled = false; -- Делаем клетку недоступной после проставления в неё фигуры
                               WhoNow = WhoNow + 1
                               if ( WhoNow % 2 == 0 ) then
                                   arrayText[i][j] = 1
@@ -300,6 +451,7 @@ function scene:create( event )
                                   print( "O has been printed in [" .. i .. "][" .. j .. "]" )
                               end
                               CheckWin();
+                              turnAI();
                         end
                     end
                 end
@@ -307,20 +459,11 @@ function scene:create( event )
         end
     end
 
-    -- local function Action()
-    --     -- if (accessToLock == true and count > 3) then
-    --     --     lockTheBlock()
-    --     -- end
-    --     if (accessTurn == true) then
-    --         touchTurn()
-    --     end
-    -- end
-
     -- Тута у нас функция рисующая прямоугольники
     local function createRect(_id, _x, _y, arrayX, arrayY)
-        local rnd1 = math.random(0.0, 1.0) --R
-        local rnd2 = math.random(0.0, 1.0) --G
-        local rnd3 = math.random(0.0, 1.0) --B
+        rnd1 = math.random(0.0, 1.0) --R
+        rnd2 = math.random(0.0, 1.0) --G
+        rnd3 = math.random(0.0, 1.0) --B
         if (rnd1 == 0.0 and rnd2 == 0.0 and rnd3 == 0.0) then -- Если цвет квадрата чёрный, то превращаем его в белый
             rnd1 = 1
             rnd2 = 1
@@ -331,7 +474,6 @@ function scene:create( event )
         rectangle.strokeWidth = 3 -- Указываем ширину линий из которых он состоит
         rectangle:setFillColor( black, 0.01 ) -- Делаем квадратик прозрачным :)
         rectangle:setStrokeColor( rnd1, rnd2, rnd3 ) -- Делаем рандомный цвет квадратику
-        rectangle.strokeWidth = 3
         rectangle.selected = false;
         rectangle.enabled = true;
         mainGroup.parent:insert(rectangle)-- Добавляем наш прямоугольник на сцену
@@ -344,16 +486,21 @@ function scene:create( event )
     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     local function drawField()
         for i = 1, count do
-            arrayText[i] = {};
             for j = 1, count do
                 createRect( i,  startX + (i-1)*size, startY + (j-1)*size, i, j ); -- тут чистая математика, просто надо разобраться и всё
-                arrayText[i][j] = 0;
             end
         end
 
+        for i = 1, count do
+            arrayText[i] = {};
+            for j = 1, count do
+                arrayText[i][j] = 0;
+            end
+        end
     end
     drawField()
     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 end
 
@@ -411,12 +558,6 @@ scene:addEventListener( "destroy", scene )
 return scene
 
 
-
--- Функция TouchTurn работает мягко говоря хуёво и это исправляется двумя способами:
--- 1. Внимание Костыль!!! Можно скопировать if из первой части функции во вторую, это будет полегче, но это костыль.
--- 2. Надо переписать array под двумерный массив и убрать несколько циклов. Мало того, что это будет более оптимизировано так ещё и без костылей(но над этим париться надо)
--- Далее надо сохранить функцию CheckWin, которая есть сейчас, ато слишком много ошибок это хреново, она послужит нам дебаггером.
--- После переписать прошлый CheckWin, если будут ошибки, наш дебаггер поможет их найти, если не будет, то это успех!
 -- Далее надо написать ИИ, работающий по алгоритму "Подсчёта пустой клетки"(Ахуенное название правда?).
 -- Этот алгоритм в отличие от CheckWin будет брать в расчёт только пустые клетки и считать их эффективность, таким образом мы сможем сделать ИИ сложного и среднего уровней.
 -- После надо подумать над созданием ИИ лёгкого и невозможного уровней, ибо это сложно. Тут возможно(а может и нет), пригодятся тестировщики, благо они есть.

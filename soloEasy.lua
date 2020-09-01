@@ -85,11 +85,8 @@ function scene:create( event )
     local size = display.contentWidth/count; -- Размер клетки
     local startX = W/2 + size/2 - size*count/2; -- Начало отчета для клетки
     local startY = H/2 + size/2 - size*count/2; -- Начало отсчета для клетки
-    local emblems = {"redKrestikButton.png", "greenNolikButton.png"}; -- Массив с эмблемами "krestMenu.png", "nolMenu.png",
-    local arrayText = {}; -- Значения клеток хранятся тут
-    local accessTurn = true;
-    local accessToLock = true;
-
+    local emblems = {"redKrestikButton.png", "greenNolikButton.png"} -- Массив с эмблемами "krestMenu.png", "nolMenu.png",
+    local arrayText = {} -- Значения клеток хранятся тут
     local array = {} -- Сами клетки хранятся тут
     for i= 1, count do -- Создаем двумерный массив
         array[i] = {}
@@ -104,8 +101,8 @@ function scene:create( event )
     --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     -- Functions
     --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    --Функция, которая считает свободные квадратики
-    function getCountFreeRect()
+
+    function getCountFreeRect() --Функция, которая считает свободные квадратики
         local countFree = count^2;
         for i = 1, count do
             for j = 1, count do
@@ -119,23 +116,10 @@ function scene:create( event )
     end
 
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    -- local function lockTheBlock()
-    --     local countAreas = 0;
-    --     if ( count >= 12 or count == 8 ) then
-    --         countAreas = 4;
-    --     elseif ( count < 12 and count%3 == 0 ) then
-    --         countAreas = 3;
-    --     else
-    --         countAreas = 2;
-    --     end
-    --     local areas = count//countAreas;
-    --     local allAreas = areas^2;
-    --     -------------------------------------------------
-    --     for i = 1, count^2/allAreas do
-    --
-    --     end
-    -- end
-    ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
     local function CheckWin() -- ооооо, тут все и начинается
         local function Victory(sum)
             -- print("---Victory---")
@@ -224,7 +208,104 @@ function scene:create( event )
     end
 
 
+    ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+    local function turnAI() -- Тут у наc функкция отвечающая за ИИ
+        local function turnAIEasy()
+            local countAI = 0; -- Эффективность клетки
+            local posI = i;
+            local posJ = j;
+            local cndStar = false;
+            cndStarToWin = true;
+            local arrayStar = {};
+            for i = 1, count do
+                for j = 1, count do -- выбор клетки
+                    if ( arrayText[i][j] == 0 ) then
+                        for starNumber = 1, 8 do
+                            arrayStar[starNumber] = 0;
+                        end
+                        for c = 1, countToWin do
+                            ------------------------------------------
+                            -------------Horizontal_Right-------------
+                            if ( i+c <= count ) then
+                                arrayStar[1] = arrayStar[1] + math.abs(arrayText[i+c][j]);
+                            end
+                            ------------------------------------------
+                            -------------Horizontal_Left--------------
+                            if ( i-c > 0 ) then
+                                arrayStar[2] = arrayStar[2] + math.abs(arrayText[i-c][j]);
+                            end
+                            ------------------------------------------
+                            -------------Vertical_Down----------------
+                            if ( j+c <= count ) then
+                                arrayStar[3] = arrayStar[3] + math.abs(arrayText[i][j+c]);
+                            end
+                            ------------------------------------------
+                            -------------Vertical_Up------------------
+                            if ( j-c > 0 ) then
+                                arrayStar[4] = arrayStar[4] + math.abs(arrayText[i][j-c]);
+                            end
+                            ------------------------------------------
+                            -------------Diagonal_1_Down--------------
+                            if ( j+c <= count and i+c <= count ) then
+                                arrayStar[5] = arrayStar[5] + math.abs(arrayText[i+c][j+c]);
+                            end
+                            ------------------------------------------
+                            -------------Diagonal_1_Up----------------
+                            if ( j-c > 0 and i-c > 0 ) then
+                                arrayStar[6] = arrayStar[6] + math.abs(arrayText[i-c][j-c]);
+                            end
+                            ------------------------------------------
+                            -------------Diagonal_2_Down--------------
+                            if ( i-c > 0 and j+c <= count ) then
+                                arrayStar[7] = arrayStar[7] + math.abs(arrayText[i-c][j+c]);
+                            end
+                            ------------------------------------------
+                            -------------Diagonal_2_Up----------------
+                            if ( i+c <= count and j-c > 0 ) then
+                                arrayStar[8] = arrayStar[8] + math.abs(arrayText[i+c][j-c]);
+                            end
+                        end
+                        local countAINew = 0;
+                        for starNum = 1, #arrayStar do
+                            countAINew = countAINew + arrayStar[starNum];
+                            if (arrayStar[starNum] >= countToWin - 1 and cndStarToWin == true) then
+                                cndStarToWin = false;
+                                cndStar = true;
+                                posI = i;
+                                posJ = j;
+                            end
+                        end
+                        if ( countAI < countAINew and cndStar == false ) then
+                            countAI = countAINew;
+                            posI = i;
+                            posJ = j;
+                            -- print( "countAI for [" .. i .. "][" .. j .. "] == " .. countAI )
+                        end
+                    end
+                end
+            end
+            -- print( "The highest countAI == " .. countAI )
+            if ( array[posI][posJ].enabled ) then -- Если квадратик доступен то...
+                local _x, _y = array[posI][posJ]:localToContent( 0, 0 ); -- Тут узнаём координаты центров всех квадратов
+                local Kartina = display.newImageRect(emblems[WhoNow], size/1.5, size/1.5)
+                Kartina.x = _x
+                Kartina.y = _y
+                array[posI][posJ].enabled = false;
+                WhoNow = WhoNow + 1
+                if ( WhoNow % 2 == 0 ) then
+                    arrayText[posI][posJ] = 1
+                    -- print( "X has been printed in [" .. posI .. "][" .. posJ .. "]" )
+                else
+                    arrayText[posI][posJ] = -1
+                    -- print( "O has been printed in [" .. posI .. "][" .. posJ .. "]" )
+                end
+                CheckWin()
+                WhoNow = WhoNow + 1
+            end
+        end
+        turnAIEasy()
+    end
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     -- Дохрена сложная функция :D
@@ -278,7 +359,7 @@ function scene:create( event )
                 end
             end
         elseif ( phase == 'ended' ) then
-            if(getCountFreeRect() > 0) then
+            if( getCountFreeRect() > 0 ) then
                 for i= 1, count do
                     for j = 1, count do
                         local item_mc = array[i][j];
@@ -287,7 +368,7 @@ function scene:create( event )
                               if WhoNow > 2 then
                                 WhoNow = 1
                               end
-                              Kartina = display.newImageRect(emblems[WhoNow], size/1.5, size/1.5)
+                              local Kartina = display.newImageRect(emblems[WhoNow], size/1.5, size/1.5)
                               Kartina.x = _x
                               Kartina.y = _y
                               item_mc.enabled = false;
@@ -300,6 +381,7 @@ function scene:create( event )
                                   print( "O has been printed in [" .. i .. "][" .. j .. "]" )
                               end
                               CheckWin();
+                              turnAI();
                         end
                     end
                 end
@@ -307,20 +389,11 @@ function scene:create( event )
         end
     end
 
-    -- local function Action()
-    --     -- if (accessToLock == true and count > 3) then
-    --     --     lockTheBlock()
-    --     -- end
-    --     if (accessTurn == true) then
-    --         touchTurn()
-    --     end
-    -- end
-
     -- Тута у нас функция рисующая прямоугольники
     local function createRect(_id, _x, _y, arrayX, arrayY)
-        local rnd1 = math.random(0.0, 1.0) --R
-        local rnd2 = math.random(0.0, 1.0) --G
-        local rnd3 = math.random(0.0, 1.0) --B
+        rnd1 = math.random(0.0, 1.0) --R
+        rnd2 = math.random(0.0, 1.0) --G
+        rnd3 = math.random(0.0, 1.0) --B
         if (rnd1 == 0.0 and rnd2 == 0.0 and rnd3 == 0.0) then -- Если цвет квадрата чёрный, то превращаем его в белый
             rnd1 = 1
             rnd2 = 1
@@ -331,7 +404,6 @@ function scene:create( event )
         rectangle.strokeWidth = 3 -- Указываем ширину линий из которых он состоит
         rectangle:setFillColor( black, 0.01 ) -- Делаем квадратик прозрачным :)
         rectangle:setStrokeColor( rnd1, rnd2, rnd3 ) -- Делаем рандомный цвет квадратику
-        rectangle.strokeWidth = 3
         rectangle.selected = false;
         rectangle.enabled = true;
         mainGroup.parent:insert(rectangle)-- Добавляем наш прямоугольник на сцену
@@ -344,16 +416,21 @@ function scene:create( event )
     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     local function drawField()
         for i = 1, count do
-            arrayText[i] = {};
             for j = 1, count do
                 createRect( i,  startX + (i-1)*size, startY + (j-1)*size, i, j ); -- тут чистая математика, просто надо разобраться и всё
-                arrayText[i][j] = 0;
             end
         end
 
+        for i = 1, count do
+            arrayText[i] = {};
+            for j = 1, count do
+                arrayText[i][j] = 0;
+            end
+        end
     end
     drawField()
     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 end
 

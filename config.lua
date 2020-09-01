@@ -10,7 +10,7 @@ application =
 		width = 320,
 		height = 480,
 		scale = "adaptive",
-		fps = 60,
+		fps = 120,
 
 		--[[
 		imageSuffix =
