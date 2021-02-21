@@ -4,13 +4,6 @@ local widget = require( "widget" )
 local scene = composer.newScene()
 
 -- -----------------------------------------------------------------------------------
--- Code outside of the scene event functions below will only be executed ONCE unless
--- the scene is removed entirely (not recycled) via "composer.removeScene()"
--- -----------------------------------------------------------------------------------
-
-
-
--- -----------------------------------------------------------------------------------
 -- Scene event functions
 -- -----------------------------------------------------------------------------------
 
@@ -122,47 +115,57 @@ function scene:create( event )
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     -- CheckWin возвращает 1 если выиграл ИИ, -1 если выиграл Игрок и 0 если ничья(без обоссаного цикла c) если игра не окончена, возвращает false
     local function CheckWin()
-        local combinations = {} -- 1: H, 2: V, 3: D1(\), 4: D2(/)
-        local function ReturnWinner(winner, dir)
+        local combinations = {} -- 1: H, 2: V, 3: D1L(\), 4: D1R(\), 5: D2L(/), 6: D2R(/)
+        local function AnybodyWon(dir)
             -- Поскольку фигура игрока = 1, а ИИ = -1, для минимакса их надо бы поменять местами, ведь наибольший потенциал нужен, когды ИИ побеждает
             if combinations[dir] >= countToWin then
-                return winner*(-1)
+                return true
             else return false end
         end
         for i=1, count do
-            combinations[1], combinations[2], combinations[3], combinations[4] = 0, 0, 0, 0
+            for dir=1, 6 do
+                combinations[dir] = 0
+            end
             for j=1, count do
 
                 -- Horizontal:
-                if field[i][j] ~= 0 and combinations[1]/math.abs(combinations[1]) == field[i][j] then
+                if field[i][j] ~= 0 and (combinations[1]/math.abs(combinations[1]) == field[i][j] or combinations[1] == 0) then
                     combinations[1] = combinations[1] + field[i][j]
-                    local res = ReturnWinner(field[i][j], 1)
-                    if res then return res end
+                    if AnybodyWon(1) then return field[i][j]*(-1) end
                 else combinations[1] = 0 end
 
                 -- Vertical:
-                if field[j][i] ~= 0 and combinations[2]/math.abs(combinations[2]) == field[j][i] then
+                if field[j][i] ~= 0 and (combinations[2]/math.abs(combinations[2]) == field[j][i] or combinations[2] == 0) then
                     combinations[2] = combinations[2] + field[j][i]
-                    local res = ReturnWinner(field[j][i], 2)
-                    if res then return res end
+                    if AnybodyWon(2) then return field[j][i]*(-1) end
                 else combinations[2] = 0 end
 
                 -- Diagonal1(\):
-                if i+1 <= count and j+1 <= count
-                    if field[j][i] ~= 0 and field[j][i] == field[j+1][i+1] then
-                        combinations[3] = combinations[3] + field[j][i]
-                        local res = ReturnWinner(field[j+1][i+1], 3)
-                        if res then return res end
+                if i+j-1 <= count then
+                    -- Left:
+                    if field[i+j-1][j] ~= 0 and (combinations[3]/math.abs(combinations[3]) == field[i+j-1][j] or combinations[3] == 0) then
+                        combinations[3] = combinations[3] + field[i+j-1][j]
+                        if AnybodyWon(3) then return field[i+j-1][j]*(-1) end
                     else combinations[3] = 0 end
+                    -- Right:
+                    if field[j][i+j-1] ~= 0 and (combinations[4]/math.abs(combinations[4]) == field[j][i+j-1] or combinations[4] == 0) then
+                        combinations[4] = combinations[4] + field[j+1][i+j]
+                        if AnybodyWon(4) then return field[j+1][i+j]*(-1) end
+                    else combinations[4] = 0 end
                 end
 
                 -- Diagonal2(/):
-                if j+1 <= count and i-1 > 0 then
-                    if field[i][j] ~= 0 and field[i][j] == field[j+1][i-1] then
-                        combinations[3] = combinations[3] + field[i][j]
-                        local res = ReturnWinner(field[j+1][i-1], 3)
-                        if res then return res end
-                    else combinations[3] = 0 end
+                if i-j+1 > 0 then
+                    -- Left:
+                    if field[i-j+1][j] ~= 0 and (combinations[5]/math.abs(combinations[5]) == field[i-j+1][j] or combinations[5] == 0) then
+                        combinations[5] = combinations[5] + field[i-j+1][j]
+                        if AnybodyWon(5) then return field[i-j+1][j]*(-1) end
+                    else combinations[5] = 0 end
+                    -- Right:
+                    if field[j][i-j+1] ~= 0 and (combinations[5]/math.abs(combinations[6]) == field[j][i-j+1] or combinations[6] == 0) then
+                        combinations[6] = combinations[5] + field[j][i-j+1]
+                        if AnybodyWon(6) then return field[j][i-j+1]*(-1) end
+                    else combinations[6] = 0 end
                 end
             end
         end
