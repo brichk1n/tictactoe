@@ -91,7 +91,7 @@ function scene:create( event )
     else
         emblems = {"greenNolikButton.png", "redKrestikButton.png"}
     end
-    local arrayField = {} -- Значения клеток хранятся тут
+    local field = {} -- Значения клеток хранятся тут
     local array = {} -- Сами клетки хранятся тут
     for i= 1, count do -- Заполняем двумерный массив
         array[i] = {}
@@ -120,47 +120,53 @@ function scene:create( event )
     end
 
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    -- CheckWin возвращает 1 если выиграл ИИ, -1 если выиграл Игрок и 0 если ничья(без цикла c) если никто не выиграл, возвращает false
+    -- CheckWin возвращает 1 если выиграл ИИ, -1 если выиграл Игрок и 0 если ничья(без обоссаного цикла c) если игра не окончена, возвращает false
     local function CheckWin()
-        local function isAnyoneWons(i, j, mltI, mltJ)
-            cTWMin = countToWin-1
-            if ( arrayField[i][j] ~= 0 ) then
-                for c=1, cTWMin do
-                    if ( i+cTWMin*mltI <= count and j+cTWMin*mltJ <= count and i+cTWMin*mltI > 0 and j+cTWMin*mltJ > 0 ) then
-                        if ( arrayField[i][j] ~= arrayField[i+c*mltI][j+c*mltJ] ) then
-                            return false
-                        end
-                    end
-                end
-
-                if arrayField[i][j] == AIFigure then
-                    print( "AI Won!" )
-                    return 1
-                else
-                    print( "Player Won!" )
-                    return -1
-                end
-            end
-        end
-        if Draw() then
-            print( "Game is ended. It's Draw!" )
-            return 0
+        local combinations = {} -- 1: H, 2: V, 3: D1(\), 4: D2(/)
+        local function ReturnWinner(winner, dir)
+            -- Поскольку фигура игрока = 1, а ИИ = -1, для минимакса их надо бы поменять местами, ведь наибольший потенциал нужен, когды ИИ побеждает
+            if combinations[dir] >= countToWin then
+                return winner*(-1)
+            else return false end
         end
         for i=1, count do
+            combinations[1], combinations[2], combinations[3], combinations[4] = 0, 0, 0, 0
             for j=1, count do
-                if isAnyoneWons(i, j, 1, 0) then
-                    return isAnyoneWons(i, j, 1, 0)
-                elseif isAnyoneWons(i, j, 0, 1) then
-                    return isAnyoneWons(i, j, 0, 1)
-                elseif isAnyoneWons(i, j, 1, 1) then
-                    return isAnyoneWons(i, j, 1, 1)
-                elseif isAnyoneWons(i, j, 1, -1) then
-                    return isAnyoneWons(i, j, 1, -1)
-                else
-                    return false
+
+                -- Horizontal:
+                if field[i][j] ~= 0 and combinations[1]/math.abs(combinations[1]) == field[i][j] then
+                    combinations[1] = combinations[1] + field[i][j]
+                    local res = ReturnWinner(field[i][j], 1)
+                    if res then return res end
+                else combinations[1] = 0 end
+
+                -- Vertical:
+                if field[j][i] ~= 0 and combinations[2]/math.abs(combinations[2]) == field[j][i] then
+                    combinations[2] = combinations[2] + field[j][i]
+                    local res = ReturnWinner(field[j][i], 2)
+                    if res then return res end
+                else combinations[2] = 0 end
+
+                -- Diagonal1(\):
+                if i+1 <= count and j+1 <= count
+                    if field[j][i] ~= 0 and field[j][i] == field[j+1][i+1] then
+                        combinations[3] = combinations[3] + field[j][i]
+                        local res = ReturnWinner(field[j+1][i+1], 3)
+                        if res then return res end
+                    else combinations[3] = 0 end
+                end
+
+                -- Diagonal2(/):
+                if j+1 <= count and i-1 > 0 then
+                    if field[i][j] ~= 0 and field[i][j] == field[j+1][i-1] then
+                        combinations[3] = combinations[3] + field[i][j]
+                        local res = ReturnWinner(field[j+1][i-1], 3)
+                        if res then return res end
+                    else combinations[3] = 0 end
                 end
             end
         end
+        if Draw() then return 0 else return false end
     end
 
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -172,12 +178,12 @@ function scene:create( event )
                 local Kartina
                 if prefix == 'AI' then
                     Kartina = display.newImageRect(emblems[2], size/1.5, size/1.5)
-                    arrayField[iCord][jCord] = AIFigure
+                    field[iCord][jCord] = AIFigure
                     print( prefix .. ": in [" .. iCord .. "][" .. jCord .. "]" )
 
                 elseif prefix == 'Player' then
                     Kartina = display.newImageRect(emblems[1], size/1.5, size/1.5)
-                    arrayField[iCord][jCord] = playerFigure
+                    field[iCord][jCord] = playerFigure
                     print( prefix .. ": in [" .. iCord .. "][" .. jCord .. "]" )
                 end
 
@@ -190,7 +196,7 @@ function scene:create( event )
         CheckWin()
     end
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    local function Minimax(field, depth, isAITurn) -- field = arrayField
+    local function Minimax(copiedField, depth, isAITurn) -- field = field
         local bestPotential
         if CheckWin() then -- Если игра закончилась, возвращаем игрока, который её закончил, чтобы определить выигрышна-ли ветка.
             print('ololo' .. CheckWin())
@@ -202,10 +208,10 @@ function scene:create( event )
             local bestPotential = - math.huge -- math.huge = infinity
             for i=1, count do
                 for j=1, count do
-                    if field[j][i] == 0 then
-                        field[j][i] = AIFigure
-                        local fieldPotential = Minimax(field, depth + 1, false) -- На этом моменте с волшебной силой рекурсии мы строим целую ветку развития событий
-                        field[j][i] = 0
+                    if copiedField[j][i] == 0 then
+                        copiedField[j][i] = AIFigure
+                        local fieldPotential = Minimax(copiedField, depth + 1, false) -- На этом моменте с волшебной силой рекурсии мы строим целую ветку развития событий
+                        copiedField[j][i] = 0
                         bestPotential = math.max(bestPotential, fieldPotential)
                     end
                 end
@@ -215,10 +221,10 @@ function scene:create( event )
             local bestPotential = math.huge
             for i=1, count do
                 for j=1, count do
-                    if field[j][i] == 0 then
-                        field[j][i] = playerFigure
-                        local fieldPotential = Minimax(field, depth + 1, true)
-                        field[j][i] = 0
+                    if copiedField[j][i] == 0 then
+                        copiedField[j][i] = playerFigure
+                        local fieldPotential = Minimax(copiedField, depth + 1, true)
+                        copiedField[j][i] = 0
                         bestPotential = math.min(bestPotential, fieldPotential)
                     end
                 end
@@ -230,16 +236,16 @@ function scene:create( event )
     local function LogicAI()
         local attack = {0, 0}
         local bestPotential = - math.huge
-        local field = arrayField
+        local copiedField = field
         for i=1, count do
             for j=1, count do
-                if ( field[j][i] == 0 ) then
-                    field[j][i] = AIFigure
-                    local fieldPotential = Minimax(field, 0, false)
-                    field[j][i] = 0
+                if ( copiedField[j][i] == 0 ) then
+                    copiedField[j][i] = AIFigure
+                    local fieldPotential = Minimax(copiedField, 0, false)
+                    copiedField[j][i] = 0
 
                     if fieldPotential > bestPotential then
-                        print(fieldPotential)
+                        -- print(fieldPotential)
                         bestPotential = fieldPotential
                         attack[1], attack[2] = i, j
                     end
@@ -332,9 +338,9 @@ function scene:create( event )
         end
 
         for i = 1, count do
-            arrayField[i] = {};
+            field[i] = {};
             for j = 1, count do
-                arrayField[i][j] = 0;
+                field[i][j] = 0;
             end
         end
     end
