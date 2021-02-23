@@ -100,11 +100,11 @@ function scene:create( event )
     -- Functions
     --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    function Draw() -- Есть ли на поле пустые клетки?
+    function Draw(fieldState) -- Есть ли на поле пустые клетки?
         local FoundEmptyCells = true
         for i = 1, count do
             for j = 1, count do
-                if array[i][j].enabled then
+                if fieldState[i][j] ~= 0 then
                     FoundEmptyCells = false
                 end
             end
@@ -114,11 +114,14 @@ function scene:create( event )
 
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     -- CheckWin возвращает 1 если выиграл ИИ, -1 если выиграл Игрок и 0 если ничья(без обоссаного цикла c) если игра не окончена, возвращает false
-    local function CheckWin()
+    local function CheckWin(fieldState)
+        -- for i=1, count do
+        --     print(unpack(fieldState[i]))
+        -- end
         local combinations = {} -- 1: H, 2: V, 3: D1L(\), 4: D1R(\), 5: D2L(/), 6: D2R(/)
         local function AnybodyWon(dir)
             -- Поскольку фигура игрока = 1, а ИИ = -1, для минимакса их надо бы поменять местами, ведь наибольший потенциал нужен, когды ИИ побеждает
-            if combinations[dir] >= countToWin then
+            if math.abs(combinations[dir]) >= countToWin then
                 return true
             else return false end
         end
@@ -129,53 +132,55 @@ function scene:create( event )
             for j=1, count do
 
                 -- Horizontal:
-                if field[i][j] ~= 0 and (combinations[1]/math.abs(combinations[1]) == field[i][j] or combinations[1] == 0) then
-                    combinations[1] = combinations[1] + field[i][j]
-                    if AnybodyWon(1) then return field[i][j]*(-1) end
+                if fieldState[i][j] ~= 0 and (combinations[1]/math.abs(combinations[1]) == fieldState[i][j] or combinations[1] == 0) then
+                    combinations[1] = combinations[1] + fieldState[i][j]
+                    if AnybodyWon(1) then return fieldState[i][j]*(-1) end
                 else combinations[1] = 0 end
 
                 -- Vertical:
-                if field[j][i] ~= 0 and (combinations[2]/math.abs(combinations[2]) == field[j][i] or combinations[2] == 0) then
-                    combinations[2] = combinations[2] + field[j][i]
-                    if AnybodyWon(2) then return field[j][i]*(-1) end
+                if fieldState[j][i] ~= 0 and (combinations[2]/math.abs(combinations[2]) == fieldState[j][i] or combinations[2] == 0) then
+                    combinations[2] = combinations[2] + fieldState[j][i]
+                    if AnybodyWon(2) then return fieldState[j][i]*(-1) end
                 else combinations[2] = 0 end
 
                 -- Diagonal1(\):
                 if i+j-1 <= count then
                     -- Left:
-                    if field[i+j-1][j] ~= 0 and (combinations[3]/math.abs(combinations[3]) == field[i+j-1][j] or combinations[3] == 0) then
-                        combinations[3] = combinations[3] + field[i+j-1][j]
-                        if AnybodyWon(3) then return field[i+j-1][j]*(-1) end
+                    if fieldState[i+j-1][j] ~= 0 and (combinations[3]/math.abs(combinations[3]) == fieldState[i+j-1][j] or combinations[3] == 0) then
+                        combinations[3] = combinations[3] + fieldState[i+j-1][j]
+                        if AnybodyWon(3) then return fieldState[i+j-1][j]*(-1) end
                     else combinations[3] = 0 end
                     -- Right:
-                    if field[j][i+j-1] ~= 0 and (combinations[4]/math.abs(combinations[4]) == field[j][i+j-1] or combinations[4] == 0) then
-                        combinations[4] = combinations[4] + field[j+1][i+j]
-                        if AnybodyWon(4) then return field[j+1][i+j]*(-1) end
+                    if fieldState[j][i+j-1] ~= 0 and (combinations[4]/math.abs(combinations[4]) == fieldState[j][i+j-1] or combinations[4] == 0) then
+                        combinations[4] = combinations[4] + fieldState[j][i+j-1]
+                        if AnybodyWon(4) then return fieldState[j][i+j-1]*(-1) end
                     else combinations[4] = 0 end
                 end
 
                 -- Diagonal2(/):
                 if i-j+1 > 0 then
                     -- Left:
-                    if field[i-j+1][j] ~= 0 and (combinations[5]/math.abs(combinations[5]) == field[i-j+1][j] or combinations[5] == 0) then
-                        combinations[5] = combinations[5] + field[i-j+1][j]
-                        if AnybodyWon(5) then return field[i-j+1][j]*(-1) end
+                    if fieldState[i-j+1][j] ~= 0 and (combinations[5]/math.abs(combinations[5]) == fieldState[i-j+1][j] or combinations[5] == 0) then
+                        combinations[5] = combinations[5] + fieldState[i-j+1][j]
+                        if AnybodyWon(5) then return fieldState[i-j+1][j]*(-1) end
                     else combinations[5] = 0 end
+                end
+                if i+j-1 <= count then
                     -- Right:
-                    if field[j][i-j+1] ~= 0 and (combinations[5]/math.abs(combinations[6]) == field[j][i-j+1] or combinations[6] == 0) then
-                        combinations[6] = combinations[5] + field[j][i-j+1]
-                        if AnybodyWon(6) then return field[j][i-j+1]*(-1) end
+                    if fieldState[i+j-1][count-j+1] ~= 0 and (combinations[6]/math.abs(combinations[6]) == fieldState[i+j-1][count-j+1] or combinations[6] == 0) then
+                        combinations[6] = combinations[6] + fieldState[i+j-1][count-j+1]
+                        if AnybodyWon(6) then return fieldState[i+j-1][count-j+1]*(-1) end
                     else combinations[6] = 0 end
                 end
             end
         end
-        if Draw() then return 0 else return false end
+        if Draw(fieldState) then return 0 else return false end
     end
 
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     local function DrawFigure(iCord, jCord, prefix) -- префикс: Player, AI
-        if not CheckWin() then
+        if not CheckWin(field) then
             if array[iCord][jCord].enabled then
 
                 local Kartina
@@ -196,19 +201,27 @@ function scene:create( event )
                 array[iCord][jCord].enabled = false
             end
         end
-        CheckWin()
     end
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     local function Minimax(copiedField, depth, isAITurn) -- field = field
         local bestPotential
-        if CheckWin() then -- Если игра закончилась, возвращаем игрока, который её закончил, чтобы определить выигрышна-ли ветка.
-            print('ololo' .. CheckWin())
-            return CheckWin()
+        if CheckWin(copiedField) then -- Если игра закончилась, возвращаем игрока, который её закончил, чтобы определить выигрышна-ли ветка.
+            -- print('ololo' .. CheckWin())
+            return CheckWin(copiedField)
+        -- else
+        --     print(Draw(copiedField))
+        --     for i=1, count do
+        --         print(unpack(field[i]))
+        --     end
+        --     print([[
+        --
+        --
+        --     ]])
         end
 
         if isAITurn then
             -- Выбираем ход который выгоден для ИИ
-            local bestPotential = - math.huge -- math.huge = infinity
+            bestPotential = - math.huge -- math.huge = infinity
             for i=1, count do
                 for j=1, count do
                     if copiedField[j][i] == 0 then
@@ -221,7 +234,7 @@ function scene:create( event )
             end
         else
             -- Выбираем ход который НЕ выгоден для ИИ
-            local bestPotential = math.huge
+            bestPotential = math.huge
             for i=1, count do
                 for j=1, count do
                     if copiedField[j][i] == 0 then
@@ -237,8 +250,8 @@ function scene:create( event )
     end
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     local function LogicAI()
+        local bestPotential = -
         local attack = {0, 0}
-        local bestPotential = - math.huge
         local copiedField = field
         for i=1, count do
             for j=1, count do
@@ -246,15 +259,15 @@ function scene:create( event )
                     copiedField[j][i] = AIFigure
                     local fieldPotential = Minimax(copiedField, 0, false)
                     copiedField[j][i] = 0
-
                     if fieldPotential > bestPotential then
-                        -- print(fieldPotential)
                         bestPotential = fieldPotential
                         attack[1], attack[2] = i, j
                     end
                 end
             end
         end
+        print('ебучий нил')
+        print("PIZDA", attack[1], attack[2])
         DrawFigure(attack[1], attack[2], 'AI')
     end
     ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
